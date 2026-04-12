@@ -1,8 +1,8 @@
 'use client';
 
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, Camera, Video, X } from 'lucide-react';
+import { AlertCircle, X, Camera, Video } from 'lucide-react';
 
 interface EmergencyCaptureProps {
   onCapture: (media: { type: 'photo' | 'video'; data: Blob; thumbnail?: string }) => void;
@@ -12,86 +12,93 @@ interface EmergencyCaptureProps {
 export function EmergencyCapture({ onCapture, onClose }: EmergencyCaptureProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [cameraActive, setCameraActive] = useState(false);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
-  const [recordedChunks, setRecordedChunks] = useState<Blob[]>([]);
-  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const initCamera = async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment' },
-          audio: isRecording,
-        });
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          setCameraActive(true);
-        }
-      } catch (err) {
-        setError('Unable to access camera. Please check permissions.');
-        console.error('Camera error:', err);
+  // Start Camera
+  const startCamera = useCallback(async () => {
+    try {
+      setError(null);
+      setIsLoading(true);
+
+      // Stop any existing stream first
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
       }
-    };
 
-    initCamera();
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { 
+          facingMode: 'environment',
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        },
+        audio: false
+      });
 
-    return () => {
-      if (videoRef.current?.srcObject) {
-        const tracks = (videoRef.current.srcObject as MediaStream).getTracks();
-        tracks.forEach((track) => track.stop());
+      streamRef.current = stream;
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        // Wait for video to be ready
+        videoRef.current.onloadedmetadata = () => {
+          videoRef.current?.play().catch(console.error);
+          setIsLoading(false);
+        };
       }
-    };
-  }, [isRecording]);
+    } catch (err: any) {
+      console.error(err);
+      setError('Cannot access camera. Please allow permission in your browser.');
+      setIsLoading(false);
+    }
+  }, []);
 
+  // Capture Photo
   const handlePhotoCapture = () => {
     if (!videoRef.current || !canvasRef.current) return;
 
-    const context = canvasRef.current.getContext('2d');
-    if (!context) return;
+    const canvas = canvasRef.current;
+    canvas.width = videoRef.current.videoWidth;
+    canvas.height = videoRef.current.videoHeight;
 
-    canvasRef.current.width = videoRef.current.videoWidth;
-    canvasRef.current.height = videoRef.current.videoHeight;
-    context.drawImage(videoRef.current, 0, 0);
+    const ctx = canvas.getContext('2d');
+    ctx?.drawImage(videoRef.current, 0, 0);
 
-    canvasRef.current.toBlob((blob) => {
+    canvas.toBlob((blob) => {
       if (blob) {
-        onCapture({ type: 'photo', data: blob });
+        onCapture({
+          type: 'photo',
+          data: blob,
+          thumbnail: canvas.toDataURL('image/jpeg', 0.85)
+        });
       }
     }, 'image/jpeg', 0.95);
   };
 
-  const startRecording = async () => {
-    if (!videoRef.current?.srcObject) return;
+  // Start Video Recording
+  const startRecording = () => {
+    if (!streamRef.current) return;
 
-    const chunks: Blob[] = [];
-    const recorder = new MediaRecorder(videoRef.current.srcObject as MediaStream, {
-      mimeType: 'video/webm;codecs=vp9',
+    const recorder = new MediaRecorder(streamRef.current, {
+      mimeType: 'video/webm'
     });
 
-    recorder.ondataavailable = (event) => {
-      if (event.data.size > 0) {
-        chunks.push(event.data);
-      }
+    const chunks: Blob[] = [];
+
+    recorder.ondataavailable = (e) => {
+      if (e.data.size > 0) chunks.push(e.data);
     };
 
     recorder.onstop = () => {
       const blob = new Blob(chunks, { type: 'video/webm' });
-      // Create thumbnail
-      if (canvasRef.current) {
-        const context = canvasRef.current.getContext('2d');
-        if (context && videoRef.current) {
-          canvasRef.current.width = videoRef.current.videoWidth;
-          canvasRef.current.height = videoRef.current.videoHeight;
-          context.drawImage(videoRef.current, 0, 0);
-          const thumbnail = canvasRef.current.toDataURL('image/jpeg');
-          onCapture({ type: 'video', data: blob, thumbnail });
-        }
-      }
+      onCapture({ type: 'video', data: blob });
+      setIsRecording(false);
     };
 
-    recorder.start();
+    recorder.start(1000); // Collect data every second
     setMediaRecorder(recorder);
     setIsRecording(true);
   };
@@ -99,85 +106,105 @@ export function EmergencyCapture({ onCapture, onClose }: EmergencyCaptureProps) 
   const stopRecording = () => {
     if (mediaRecorder) {
       mediaRecorder.stop();
-      setIsRecording(false);
+      setMediaRecorder(null);
     }
   };
 
+  // Cleanup
+  const handleClose = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+    }
+    if (mediaRecorder) mediaRecorder.stop();
+    onClose();
+  };
+
+  // Initialize camera
+  useEffect(() => {
+    startCamera();
+
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [startCamera]);
+
   return (
-    <div className="fixed inset-0 bg-background flex flex-col justify-between z-50">
+    <div className="fixed inset-0 bg-black z-[100] flex flex-col">
       {/* Header */}
-      <div className="bg-gradient-to-b from-background via-background to-transparent p-4 flex justify-between items-center">
-        <div className="flex items-center gap-2">
-          <AlertCircle className="w-5 h-5 text-accent" />
-          <h2 className="text-lg font-semibold">Capture Emergency</h2>
-        </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onClose}
-          className="hover:bg-secondary"
-        >
-          <X className="w-5 h-5" />
+      <div className="p-4 flex justify-between items-center bg-black/80">
+        <h2 className="text-white text-xl font-semibold">Capture Emergency</h2>
+        <Button variant="ghost" size="icon" onClick={handleClose} className="text-white">
+          <X size={28} />
         </Button>
       </div>
 
-      {/* Camera View */}
-      <div className="flex-1 relative overflow-hidden bg-primary">
-        {cameraActive && (
-          <video
-            ref={videoRef}
-            autoPlay
-            playsInline
-            className="w-full h-full object-cover"
-          />
-        )}
-        {error && (
-          <div className="absolute inset-0 flex items-center justify-center bg-destructive/20 flex-col gap-4 p-4 text-center">
-            <AlertCircle className="w-12 h-12 text-destructive" />
-            <p className="text-foreground font-medium">{error}</p>
-            <Button onClick={onClose} variant="outline">
-              Go Back
-            </Button>
+      {/* Video Preview */}
+      <div className="flex-1 relative bg-black">
+        {isLoading && (
+          <div className="absolute inset-0 flex items-center justify-center text-white z-10">
+            Opening Camera...
           </div>
         )}
+
+        {error && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-8 bg-black/95 z-10">
+            <AlertCircle className="w-20 h-20 text-red-500 mb-6" />
+            <p className="text-white text-lg mb-6">{error}</p>
+            <Button onClick={startCamera} size="lg">Try Again</Button>
+          </div>
+        )}
+
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted
+          className="w-full h-full object-cover"
+        />
+
         <canvas ref={canvasRef} className="hidden" />
+
+        {/* Recording Indicator */}
+        {isRecording && (
+          <div className="absolute top-8 left-1/2 -translate-x-1/2 bg-red-600 text-white px-6 py-3 rounded-full flex items-center gap-3 font-medium shadow-lg">
+            <div className="w-4 h-4 bg-white rounded-full animate-pulse" />
+            RECORDING
+          </div>
+        )}
       </div>
 
-      {/* Recording Indicator */}
-      {isRecording && (
-        <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-destructive text-destructive-foreground px-4 py-2 rounded-full flex items-center gap-2 animate-pulse">
-          <div className="w-2 h-2 bg-destructive-foreground rounded-full animate-pulse" />
-          Recording...
-        </div>
-      )}
-
-      {/* Controls */}
-      <div className="bg-gradient-to-t from-background via-background to-transparent p-6 flex gap-4 justify-center items-center">
+      {/* Capture Buttons */}
+      <div className="bg-gradient-to-t from-black via-black/80 to-transparent px-10 py-6 flex justify-center gap-16 items-center min-h-32">
         {!isRecording ? (
           <>
-            <Button
+            <button
               onClick={handlePhotoCapture}
-              size="lg"
-              className="rounded-full w-16 h-16 flex items-center justify-center bg-accent hover:bg-accent/90 text-accent-foreground"
+              disabled={isLoading || error !== null}
+              className="w-24 h-24 rounded-full bg-white flex items-center justify-center shadow-2xl active:scale-95 transition-all border-8 border-white/30 hover:bg-white/90 disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Take Photo"
             >
-              <Camera className="w-6 h-6" />
-            </Button>
-            <Button
+              <Camera className="w-12 h-12 text-black" />
+            </button>
+
+            <button
               onClick={startRecording}
-              size="lg"
-              className="rounded-full w-16 h-16 flex items-center justify-center bg-accent hover:bg-accent/90 text-accent-foreground"
+              disabled={isLoading || error !== null}
+              className="w-24 h-24 rounded-full bg-white flex items-center justify-center shadow-2xl active:scale-95 transition-all border-8 border-white/30 hover:bg-white/90 disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Start Recording"
             >
-              <Video className="w-6 h-6" />
-            </Button>
+              <Video className="w-12 h-12 text-black" />
+            </button>
           </>
         ) : (
-          <Button
+          <button
             onClick={stopRecording}
-            size="lg"
-            className="rounded-full w-16 h-16 flex items-center justify-center bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+            className="w-28 h-28 rounded-full bg-red-600 flex items-center justify-center shadow-2xl active:scale-95 hover:bg-red-700 transition-all"
+            title="Stop Recording"
           >
-            <AlertCircle className="w-6 h-6" />
-          </Button>
+            <div className="w-14 h-14 bg-white rounded" />
+          </button>
         )}
       </div>
     </div>
