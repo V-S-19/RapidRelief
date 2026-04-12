@@ -1,0 +1,17 @@
+{
+  "name": "rapidrelief",
+  "version": "1.0.0",
+  "description": "Emergency Service Website with AI",
+  "scripts": {
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "cd backend && nodemon server.js",
+    "dev:ai": "cd ai-service && uvicorn main:app --reload --port 8000",
+    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\" \"npm run dev:ai\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "dependencies": {
+    "axios": "^1.14.0"
+  }
+}
