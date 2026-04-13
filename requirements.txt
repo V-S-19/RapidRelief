@@ -1,0 +1,22 @@
+# RapidRelief Project - Python Dependencies
+# AI Service and Python Components
+
+# Web Framework
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+
+# Computer Vision
+opencv-python>=4.10.0
+
+# Data Processing
+numpy>=2.1.0
+pydantic>=2.9.0
+
+# File Handling
+python-multipart>=0.0.12
+
+# Optional: Add below as needed
+# pytest>=7.0.0  (for testing)
+# black>=23.0.0  (for code formatting)
+# flake8>=6.0.0  (for linting)
+# requests>=2.31.0  (for HTTP requests if not using axios from Node)
