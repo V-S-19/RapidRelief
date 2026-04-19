@@ -1,32 +1,42 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from model import detect_emergency
+from model import analyze_image
+import logging
 
-app = FastAPI()
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-class FrameData(BaseModel):
-    image: str
+app = FastAPI(title="RapidRelief AI Service")
+
+# Better CORS - change "*" to your frontend URL in production
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],           # ← Change to ["http://localhost:3000", "http://127.0.0.1:5173"] etc.
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+class ImageRequest(BaseModel):
+    image: str   # base64 string
 
 @app.get("/")
 def home():
-    try:
-        return {"message": "AI Service Running"}
-    except Exception as e:
-        return {"error": str(e), "message": "Service error"}
+    return {"message": "AI Service Running 🚀"}
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
 
 @app.post("/analyze")
-def analyze(data: FrameData):
+async def analyze(request: ImageRequest):   # ← Changed to async
     try:
-        if not data.image:
-            return {
-                "alert": {
-                    "status": "error",
-                    "confidence": 0.0
-                },
-                "message": "No image provided"
-            }
-        
-        result = detect_emergency(data.image)
+        if not request.image:
+            raise HTTPException(status_code=400, detail="No image provided")
+
+        result = analyze_image(request.image)
 
         return {
             "alert": {
@@ -36,10 +46,5 @@ def analyze(data: FrameData):
             "message": result["message"]
         }
     except Exception as e:
-        return {
-            "alert": {
-                "status": "error",
-                "confidence": 0.0
-            },
-            "message": f"Analysis error: {str(e)}"
-        }
+        logger.error(f"Analysis error: {e}")
+        raise HTTPException(status_code=500, detail="Image processing failed. Image may be too large or corrupted.")
