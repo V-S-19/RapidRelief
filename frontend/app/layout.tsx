@@ -9,7 +9,6 @@ const _geistMono = Geist_Mono({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: 'RapidRelief - Emergency Response',
   description: 'Fast emergency reporting platform. Report accidents in real-time with photos or videos.',
-  viewport: 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no',
   generator: 'v0.app',
   icons: {
     icon: [
@@ -28,13 +27,21 @@ export const metadata: Metadata = {
     ],
     apple: '/apple-icon.png',
   },
-}
+};
+
+// ✅ MOVE HERE
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1.0,
+  maximumScale: 1.0,
+  userScalable: false,
+};
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode
-}>) {
+}) {
   return (
     <html lang="en" className="dark">
       <body className="font-sans antialiased bg-background text-foreground min-h-screen">

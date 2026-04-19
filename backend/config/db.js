@@ -2,7 +2,11 @@ import mongoose from "mongoose";
 
 const connectDB = async () => {
   try {
+<<<<<<< HEAD
     const mongoURI = process.env.MONGO_URI;
+=======
+    console.log("🔄 Connecting to MongoDB...");
+>>>>>>> aee6c7a86af49292a16ba06589d3c8fecef1cb8f
 
     if (!mongoURI) {
       console.error("❌ MONGO_URI is not defined in .env file");
