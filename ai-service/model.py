@@ -69,11 +69,27 @@ def detect_fire(image):
         logger.error(f"Fire detection error: {e}")
         return 0.0
 
+def detect_accident(image):
+    try:
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
+        edges = cv2.Canny(gray, 100, 200)
+
+        edge_pixels = cv2.countNonZero(edges)
+        total_pixels = image.shape[0] * image.shape[1]
+
+        if total_pixels == 0:
+            return 0.0
+
+        return edge_pixels / total_pixels
+    except Exception as e:
+        logger.error(f"Accident detection error: {e}")
+        return 0.0
+    
 def analyze_image(image_data: str):
     image = decode_image(image_data)
 
-    if image == "test":
+    if isinstance(image, str) and image == "test":
         return {
             "status": "fire",
             "confidence": 0.95,
@@ -88,6 +104,9 @@ def analyze_image(image_data: str):
         }
 
     fire_ratio = detect_fire(image)
+    accident_ratio = detect_accident(image)
+
+    logger.info(f"Fire ratio: {fire_ratio}, Accident ratio: {accident_ratio}")
 
     if fire_ratio > 0.15:
         return {
@@ -95,12 +114,14 @@ def analyze_image(image_data: str):
             "confidence": round(min(fire_ratio * 3, 1.0), 2),
             "message": "Fire detected"
         }
-    elif fire_ratio > 0.05:
+
+    elif accident_ratio > 0.25:
         return {
-            "status": "smoke",
-            "confidence": round(min(fire_ratio * 2, 1.0), 2),
-            "message": "Possible smoke detected"
+            "status": "accident",
+            "confidence": round(min(accident_ratio * 2, 1.0), 2),
+            "message": "Possible accident detected"
         }
+
     else:
         return {
             "status": "safe",
