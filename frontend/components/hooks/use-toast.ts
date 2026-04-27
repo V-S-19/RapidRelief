@@ -1,11 +1,8 @@
 import * as React from "react"
 
-import type { Toast, ToastActionElement, ToastProps } from "@/components/ui/toast"
+type ToastActionElement = React.ReactNode
 
-const TOAST_LIMIT = 1
-const TOAST_REMOVE_DELAY = 1000000
-
-type ToasterToast = Toast & {
+type ToasterToast = {
   id: string
   title?: React.ReactNode
   description?: React.ReactNode
@@ -13,6 +10,9 @@ type ToasterToast = Toast & {
   open?: boolean
   onOpenChange?: (open: boolean) => void
 }
+
+const TOAST_LIMIT = 1
+const TOAST_REMOVE_DELAY = 1000000
 
 const actionTypes = {
   ADD_TOAST: "ADD_TOAST",
