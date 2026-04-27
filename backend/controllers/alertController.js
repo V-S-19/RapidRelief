@@ -9,60 +9,103 @@ export const setSocketInstance = (socketIo) => {
 
 export const detectDanger = async (req, res) => {
   try {
-    console.log("📥 Incoming:", req.body);
+    console.log("📥 Incoming image for AI analysis");
 
     const { image } = req.body;
 
     if (!image) {
       return res.status(400).json({
         success: false,
-        message: "Image missing",
+        message: "Image base64 data is required",
       });
     }
 
-    const aiResponse = await axios.post(process.env.AI_SERVICE_URL + "/analyze", {
-      image,
-    });
+    // Check if AI service URL is configured
+    if (!process.env.AI_SERVICE_URL) {
+      console.error("❌ AI_SERVICE_URL is not defined in environment variables");
+      return res.status(500).json({
+        success: false,
+        message: "AI Service is not configured on the server",
+      });
+    }
+
+    console.log(`🤖 Calling AI Service: ${process.env.AI_SERVICE_URL}/analyze`);
+
+    // Call AI Service with timeout
+    const aiResponse = await axios.post(
+      `${process.env.AI_SERVICE_URL}/analyze`,
+      { image },
+      { 
+        timeout: 30000, // 30 seconds timeout
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }
+    );
 
     console.log("🤖 Raw AI Response:", aiResponse.data);
 
-    const alertData = aiResponse.data.alert || {};
-    const type = String(alertData.status || "unknown");
+    const alertData = aiResponse.data.alert || aiResponse.data || {};
+    
+    const type = String(alertData.status || alertData.type || "unknown").toLowerCase();
     const confidence = Number(alertData.confidence || 0);
-    const message = aiResponse.data.message || "";
+    const message = aiResponse.data.message || "AI analysis completed";
 
-    const data = {
+    const processedData = {
       danger: type !== "normal" && type !== "safe",
       type,
       confidence,
       message,
     };
 
-    console.log("✅ Processed AI Response:", data);
+    console.log("✅ Processed AI Result:", processedData);
 
+    // Save alert to database
     const newAlert = await Alert.create({
       type: type,
       image: image,
+      message: message,
+      confidence: confidence,
     });
 
+    // Broadcast via Socket.io to all connected clients
     if (io) {
       io.emit("alert", {
         ...newAlert.toObject(),
-        aiResult: data,
+        aiResult: processedData,
       });
+      console.log("📡 Alert broadcasted via WebSocket");
     }
 
     res.status(200).json({
       success: true,
       alert: newAlert,
-      aiResult: data,
+      aiResult: processedData,
     });
+
   } catch (error) {
-    console.error("❌ ERROR:", error.message);
+    console.error("❌ Error in detectDanger:", error.message);
+
+    // Specific error handling
+    if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND' || error.message.includes('Network Error')) {
+      return res.status(503).json({
+        success: false,
+        message: "AI Analysis Service is currently unavailable. Please try again later.",
+      });
+    }
+
+    if (error.response) {
+      // AI service returned an error
+      return res.status(error.response.status || 500).json({
+        success: false,
+        message: "AI Service returned an error",
+        details: error.response.data,
+      });
+    }
 
     res.status(500).json({
       success: false,
-      message: "Server Error",
+      message: "Failed to process image with AI",
       error: error.message,
     });
   }
@@ -74,11 +117,11 @@ export const getAlerts = async (req, res) => {
 
     res.status(200).json({
       success: true,
+      count: alerts.length,
       alerts,
     });
   } catch (error) {
-    console.error("❌ ERROR FETCHING ALERTS:", error.message);
-
+    console.error("❌ Error fetching alerts:", error.message);
     res.status(500).json({
       success: false,
       message: "Error fetching alerts",
@@ -101,7 +144,6 @@ export const handleEmergencyNotification = async (req, res) => {
       timestamp,
     } = req.body;
 
-    // Validate required fields
     if (!reportId || !type || !description || !location || !phone) {
       return res.status(400).json({
         success: false,
@@ -109,7 +151,6 @@ export const handleEmergencyNotification = async (req, res) => {
       });
     }
 
-    // Create emergency alert in database
     const newAlert = await Alert.create({
       type: type,
       message: description,
@@ -117,12 +158,11 @@ export const handleEmergencyNotification = async (req, res) => {
       phone: phone,
       aiResult: aiAnalysis,
       reportId: reportId,
-      createdAt: timestamp,
+      createdAt: timestamp || new Date(),
     });
 
     console.log("✅ Emergency Alert Created:", newAlert._id);
 
-    // Broadcast emergency notification via WebSocket
     if (io) {
       const emergencyData = {
         id: newAlert._id,
@@ -137,7 +177,6 @@ export const handleEmergencyNotification = async (req, res) => {
         timestamp: new Date().toISOString(),
       };
 
-      // Emit to all connected clients
       io.emit("emergency", emergencyData);
       console.log("📡 Emergency notification broadcasted via WebSocket");
     }
@@ -149,7 +188,6 @@ export const handleEmergencyNotification = async (req, res) => {
     });
   } catch (error) {
     console.error("❌ Emergency notification error:", error.message);
-
     res.status(500).json({
       success: false,
       message: "Failed to process emergency notification",
