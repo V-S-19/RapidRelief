@@ -1,51 +1,49 @@
-# RapidRelief Project - Python Dependencies
-# AI Service and Python Components
-
 # =============================================
+# RapidRelief Project - Python Dependencies
+# =============================================
+
 # Core Web Framework
 # =============================================
 fastapi>=0.115.0
 uvicorn[standard]>=0.32.0
 
-# =============================================
 # Data Validation & Models
 # =============================================
 pydantic>=2.9.0
 
-# =============================================
 # File Upload Handling
 # =============================================
 python-multipart>=0.0.12
 
+# Environment Variables
 # =============================================
+python-dotenv>=1.0.0
+
+# AI / Gemini Integration
+# =============================================
+google-generativeai>=0.8.0
+
 # Computer Vision & Image Processing
 # =============================================
-opencv-python>=4.10.0
 Pillow>=10.4.0
-
-# =============================================
-# Data Processing
-# =============================================
+opencv-python>=4.10.0
 numpy>=2.1.0
+
+# HTTP Client (Useful for external APIs)
+# =============================================
+requests>=2.32.0
 
 # =============================================
 # Optional Dependencies (Uncomment as needed)
 # =============================================
-# pytest>=8.0.0                # Testing framework
-# pytest-asyncio>=0.23.0       # Async testing support
-# black>=24.0.0                # Code formatting
-# flake8>=7.0.0                # Linting
-requests>=2.32.0             # HTTP requests
-python-dotenv>=1.0.0         # Environment variables
-# httpx>=0.27.0                # Async HTTP client
+# pytest>=8.0.0
+# pytest-asyncio>=0.23.0
+# black>=24.0.0
+# flake8>=7.0.0
+# httpx>=0.27.0
 
 # =============================================
-# Development & Production Notes
+# Installation Notes
 # =============================================
 # Install with: pip install -r requirements.txt
-# For production, consider using pip-tools or uv for locked dependencies
-
-# Computer Vision & Image Processing
-
-
-
+# For better dependency management in production, consider using `uv` or `pip-tools`
