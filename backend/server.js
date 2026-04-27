@@ -23,7 +23,7 @@ const server = http.createServer(app);
 const io = initSocket(server);
 setSocketInstance(io);
 
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 
 // Error handling for server
 server.on("error", (error) => {
