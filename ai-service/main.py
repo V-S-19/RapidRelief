@@ -1,42 +1,31 @@
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI
 from pydantic import BaseModel
-from model import analyze_image
-import logging
+from model import detect_emergency
+import os
+import uvicorn
 
-# Setup logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+app = FastAPI()
 
-app = FastAPI(title="RapidRelief AI Service")
-
-# Better CORS - change "*" to your frontend URL in production
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],           # ← Change to ["http://localhost:3000", "http://127.0.0.1:5173"] etc.
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-class ImageRequest(BaseModel):
-    image: str   # base64 string
+class FrameData(BaseModel):
+    image: str
 
 @app.get("/")
 def home():
-    return {"message": "AI Service Running 🚀"}
-
-@app.get("/health")
-def health():
-    return {"status": "ok"}
+    return {"message": "AI Service Running ✅"}
 
 @app.post("/analyze")
-async def analyze(request: ImageRequest):   # ← Changed to async
+def analyze(data: FrameData):
     try:
-        if not request.image:
-            raise HTTPException(status_code=400, detail="No image provided")
-
-        result = analyze_image(request.image)
+        if not data.image:
+            return {
+                "alert": {
+                    "status": "error",
+                    "confidence": 0.0
+                },
+                "message": "No image provided"
+            }
+        
+        result = detect_emergency(data.image)
 
         return {
             "alert": {
@@ -46,5 +35,15 @@ async def analyze(request: ImageRequest):   # ← Changed to async
             "message": result["message"]
         }
     except Exception as e:
-        logger.error(f"Analysis error: {e}")
-        raise HTTPException(status_code=500, detail="Image processing failed. Image may be too large or corrupted.")
+        return {
+            "alert": {
+                "status": "error",
+                "confidence": 0.0
+            },
+            "message": f"Analysis error: {str(e)}"
+        }
+
+# 🔥 IMPORTANT: this starts the server
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 3000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
