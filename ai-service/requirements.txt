@@ -4,3 +4,5 @@ opencv-python>=4.10.0
 numpy>=2.1.0
 python-multipart>=0.0.12     # Important if you're handling file uploads
 pydantic>=2.9.0
+google-genai>=1.0.0
+python-dotenv>=1.0.0

@@ -1,3 +1,6 @@
+# model.py
+import numpy as np
+# from your_model import load_model, predict  # YOLO, TensorFlow, PyTorch, etc.
 from fastapi import FastAPI
 from pydantic import BaseModel
 from model import detect_emergency
@@ -47,3 +50,4 @@ def analyze(data: FrameData):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 3000))
     uvicorn.run(app, host="0.0.0.0", port=port)
+
