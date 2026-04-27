@@ -15,7 +15,7 @@ const app = express();
 app.use(cors({
   origin: [
     "https://rapid-relief.vercel.app",           // ← Change this to your actual Vercel URL
-    "https://rapidrelief-frontend.vercel.app",   // Add variations if needed
+    "https://rapid-relief-7o8v9hywj-vdnshshrivas-1556s-projects.vercel.app?_vercel_share=8HimybdgZZCxp0myAQP3MHQFPVek0agM",   // Add variations if needed
     "http://localhost:3000",
     "http://localhost:5173",
     "http://localhost:5174"
