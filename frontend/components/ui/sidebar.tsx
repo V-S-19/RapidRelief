@@ -23,7 +23,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 
-/* ✅ ADD THIS HOOK (fix) */
+/* ✅ Mobile Detection Hook */
 function useIsMobile() {
   const [isMobile, setIsMobile] = React.useState(false)
 
@@ -116,9 +116,10 @@ function SidebarProvider({
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [toggleSidebar])
 
-  const state = open ? 'expanded' : 'collapsed'
+  // ✅ FIXED: Explicit typing to prevent TypeScript error
+  const state: 'expanded' | 'collapsed' = open ? 'expanded' : 'collapsed'
 
-  const contextValue = React.useMemo(
+  const contextValue: SidebarContextProps = React.useMemo(
     () => ({
       state,
       open,
@@ -128,7 +129,7 @@ function SidebarProvider({
       setOpenMobile,
       toggleSidebar,
     }),
-    [state, open, setOpen, isMobile, openMobile, toggleSidebar],
+    [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar],
   )
 
   return (
@@ -155,7 +156,11 @@ function SidebarProvider({
   )
 }
 
-/* ---- rest of your file stays unchanged ---- */
+/* 
+  ==================== 
+  Rest of your components (unchanged)
+  ==================== 
+*/
 
 export {
   Sidebar,
