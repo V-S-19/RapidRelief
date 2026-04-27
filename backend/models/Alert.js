@@ -23,7 +23,6 @@ const alertSchema = new mongoose.Schema({
   },
   reportId: {
     type: String,
-    unique: true,
     sparse: true,
   },
   aiResult: {

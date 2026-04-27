@@ -8,6 +8,7 @@ import alertRoutes from "./routes/alertRoutes.js";
 import initSocket from "./socket/socket.js";
 import { setSocketInstance } from "./controllers/alertController.js";
 
+
 const app = express();
 
 app.use(cors());

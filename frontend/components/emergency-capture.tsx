@@ -2,7 +2,7 @@
 
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, X, Camera, Video } from 'lucide-react';
+import { AlertCircle, X, Camera } from 'lucide-react';
 
 interface EmergencyCaptureProps {
   onCapture: (media: { type: 'photo' | 'video'; data: Blob; thumbnail?: string }) => void;
@@ -186,15 +186,6 @@ export function EmergencyCapture({ onCapture, onClose }: EmergencyCaptureProps) 
               title="Take Photo"
             >
               <Camera className="w-12 h-12 text-black" />
-            </button>
-
-            <button
-              onClick={startRecording}
-              disabled={isLoading || error !== null}
-              className="w-24 h-24 rounded-full bg-white flex items-center justify-center shadow-2xl active:scale-95 transition-all border-8 border-white/30 hover:bg-white/90 disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Start Recording"
-            >
-              <Video className="w-12 h-12 text-black" />
             </button>
           </>
         ) : (

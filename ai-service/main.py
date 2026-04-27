@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from model import detect_emergency
+import os
+import uvicorn
 
 app = FastAPI()
 
@@ -9,10 +11,7 @@ class FrameData(BaseModel):
 
 @app.get("/")
 def home():
-    try:
-        return {"message": "AI Service Running"}
-    except Exception as e:
-        return {"error": str(e), "message": "Service error"}
+    return {"message": "AI Service Running ✅"}
 
 @app.post("/analyze")
 def analyze(data: FrameData):
@@ -43,3 +42,8 @@ def analyze(data: FrameData):
             },
             "message": f"Analysis error: {str(e)}"
         }
+
+# 🔥 IMPORTANT: this starts the server
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 3000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
