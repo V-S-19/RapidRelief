@@ -2,33 +2,39 @@ import mongoose from "mongoose";
 
 const connectDB = async () => {
   try {
+    // Support both common variable names
+    const mongoURI = process.env.MONGO_URI || process.env.MONGODB_URI;
 
-    const mongoURI = process.env.MONGO_URI;
-    console.log("🔄 Connecting to MongoDB...");
+    console.log("🔄 Attempting to connect to MongoDB...");
 
     if (!mongoURI) {
-      console.error("❌ MONGO_URI is not defined in .env file");
-      process.exit(1);
+      console.warn("⚠️  MONGO_URI / MONGODB_URI is not defined.");
+      console.warn("   → Server will start WITHOUT database connection.");
+      return;                    // Do NOT crash the app
     }
 
-    console.log("🔄 Connecting to MongoDB...");
+    console.log("🔄 Connecting to MongoDB Atlas...");
 
     const conn = await mongoose.connect(mongoURI, {
-      // Optional but helpful settings
-      serverSelectionTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 10000,   // 10 seconds (good balance)
+      socketTimeoutMS: 45000,            // Keep socket alive longer
+      retryWrites: true,                 // Recommended for Atlas
+      // useNewUrlParser and useUnifiedTopology are no longer needed in recent Mongoose
     });
 
     console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
-    console.log(`   Database: ${conn.connection.name}`);
+    console.log(`   Database: ${conn.connection.name || 'default'}`);
   } catch (error) {
     console.error("❌ MongoDB Connection Error:", error.message);
 
-    if (error.message.includes("ECONNREFUSED")) {
-      console.error("   → Make sure MongoDB server is running on 127.0.0.1:27017");
+    if (error.name === "MongooseServerSelectionError") {
+      console.error("   → Could not reach MongoDB Atlas. Check your MONGO_URI, network access (0.0.0.0/0), and password.");
+    } else if (error.message.includes("ECONNREFUSED")) {
+      console.error("   → Local MongoDB not running or wrong connection string.");
     }
 
-    // Don't exit immediately — let nodemon restart
-    console.log("   → App will restart when you save a file (nodemon)");
+    console.warn("   → The backend server will continue running without MongoDB.");
+    // Do NOT call process.exit(1) in production
   }
 };
 
