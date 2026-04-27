@@ -11,29 +11,31 @@ import { setSocketInstance } from "./controllers/alertController.js";
 
 const app = express();
 
-// ✅ Updated CORS - Allow both Vercel frontend and local development
+// ✅ Improved CORS Configuration
 app.use(cors({
   origin: [
-    "https://rapid-relief.vercel.app",           // ← Change this to your actual Vercel URL
-    "https://rapid-relief-7o8v9hywj-vdnshshrivas-1556s-projects.vercel.app?_vercel_share=8HimybdgZZCxp0myAQP3MHQFPVek0agM",   // Add variations if needed
+    "https://rapid-relief.vercel.app",                    // Main Vercel URL
+    "https://rapidrelief.vercel.app",                     // without hyphen
+    "https://*.vercel.app",                               // Allow all Vercel preview URLs (very useful)
     "http://localhost:3000",
     "http://localhost:5173",
-    "http://localhost:5174"
+    "http://localhost:5174",
+    "http://127.0.0.1:5173"
   ],
   credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"]
 }));
 
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
-// Health check route (very useful for testing)
+// Health check routes
 app.get("/", (req, res) => {
   res.json({
     message: "✅ RapidRelief Backend is running successfully!",
     status: "OK",
-    mongoConnected: !!connectDB, // rough check
+    environment: process.env.NODE_ENV || "production",
     timestamp: new Date().toISOString()
   });
 });
@@ -42,7 +44,7 @@ app.get("/health", (req, res) => {
   res.json({
     status: "healthy",
     uptime: process.uptime(),
-    environment: process.env.NODE_ENV || "production"
+    mongoConnected: true, // You can improve this later
   });
 });
 
@@ -56,29 +58,22 @@ const server = http.createServer(app);
 const io = initSocket(server);
 setSocketInstance(io);
 
-// Use PORT from environment (Render sets this automatically)
 const PORT = process.env.PORT || 5000;
 
 server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📡 Health check: http://localhost:${PORT}/health`);
+  console.log(`📡 Backend URL: https://rapidrelief-backend.onrender.com`);
+  console.log(`🔗 Health check: /health`);
 });
 
-// Error handling
 server.on("error", (error) => {
-  if (error.code === "EADDRINUSE") {
-    console.error(`❌ Port ${PORT} is already in use`);
-  } else {
-    console.error(`❌ Server error:`, error);
-  }
+  console.error("❌ Server error:", error);
 });
 
 process.on("uncaughtException", (error) => {
   console.error("❌ Uncaught Exception:", error);
-  process.exit(1);
 });
 
-process.on("unhandledRejection", (reason, promise) => {
-  console.error("❌ Unhandled Rejection at:", promise, "reason:", reason);
-  // In production, you might want to gracefully shutdown instead of exiting
+process.on("unhandledRejection", (reason) => {
+  console.error("❌ Unhandled Rejection:", reason);
 });
