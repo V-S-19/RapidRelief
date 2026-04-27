@@ -1,0 +1,24 @@
+services:
+  # 🌐 Backend (Node.js)
+  - type: web
+    name: backend
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: node server.js
+
+  # 🤖 AI Service (Python)
+  - type: web
+    name: ai-service
+    runtime: python
+    rootDir: ai-service
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+
+  # 🎨 Frontend (Next.js)
+  - type: web
+    name: frontend
+    runtime: node
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
