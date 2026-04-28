@@ -8,7 +8,6 @@ import base64
 import io
 import json
 
-# ====================== LOAD ENVIRONMENT ======================
 load_dotenv()
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -19,7 +18,6 @@ if not GEMINI_API_KEY:
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel('gemini-1.5-flash')
 
-# ====================== FASTAPI APP ======================
 app = FastAPI(title="RapidRelief AI Service")
 
 class FrameData(BaseModel):
@@ -54,10 +52,8 @@ def analyze(data: FrameData):
         }
 
 
-# ====================== EMERGENCY DETECTION FUNCTION ======================
 def detect_emergency(base64_image: str) -> dict:
     try:
-        # Decode base64 to image
         image_bytes = base64.b64decode(base64_image)
         image = Image.open(io.BytesIO(image_bytes))
 
@@ -80,7 +76,6 @@ def detect_emergency(base64_image: str) -> dict:
         response = model.generate_content([prompt, image])
         text = response.text.strip()
 
-        # Clean JSON if wrapped in markdown
         if text.startswith("```json"):
             text = text.split("```json")[1].split("```")[0].strip()
         elif text.startswith("```"):
@@ -98,7 +93,6 @@ def detect_emergency(base64_image: str) -> dict:
         }
 
 
-# ====================== RUN SERVER ======================
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8000))
